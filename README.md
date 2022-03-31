@@ -11,8 +11,8 @@ func main() {
   shelf.Put[*greeter](&greeter{w: "Hello"}) 
   shelf.Put[*greeter](&greeter{w: "こんにちは"}, "jp") 
 
-  default := shelf.Take[*greeter]()
-  default.Hello()
+  d := shelf.Take[*greeter]()
+  d.Hello()
   jp := shelf.Take[*greeter]("jp")
   jp.Hello()
 
