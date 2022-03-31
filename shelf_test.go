@@ -6,42 +6,75 @@ import (
 	"testing"
 )
 
+type dependency struct {
+	check string
+}
+
 func TestTake(t *testing.T) {
-	type dependency struct {
-		check string
+	tt := []struct {
+		name  string
+		dep   dependency
+		key   []string
+		panic bool
+	}{
+		{
+			name: "without key",
+			dep:  dependency{"dep"},
+		},
+		{
+			name: "with key",
+			dep:  dependency{"dep"},
+			key:  []string{"key"},
+		},
+		{
+			name:  "uknown key",
+			dep:   dependency{"dep"},
+			panic: true,
+		},
 	}
 
-	dep := dependency{"dep"}
+	for _, tc := range tt {
+		t.Run(tc.name, func(t *testing.T) {
+			if tc.panic {
+				defer func() {
+					if r := recover(); r != nil {
+						if fmt.Sprint(r) != fmt.Sprintf("dependency %s does not exists", tc.key) {
+							t.Errorf("should return correct panic")
+						}
+					}
+				}()
 
-	Put("dep", &dep)
-
-	got := Take("dep")
-
-	if &dep != got {
-		t.Errorf("should return correct dep from shelf")
-	}
-
-	defer func() {
-		if r := recover(); r != nil {
-			if fmt.Sprint(r) != "dependency unknown does not exists" {
-				t.Errorf("should return correct panic")
+				Put[*dependency](&tc.dep, tc.key...)
+				if &tc.dep != Take[*dependency](tc.key...) {
+					t.Errorf("should return correct dep from shelf")
+				}
 			}
-		}
-	}()
-
-	Take("unknown")
+		})
+	}
 }
 
 func TestTakeNil(t *testing.T) {
-	Put("dep", nil)
+	Put[*dependency](nil)
 
 	defer func() {
 		if r := recover(); r != nil {
-			if !strings.Contains(fmt.Sprint(r), "dependency dep holds nil value") {
+			if !strings.Contains(fmt.Sprint(r), "dependency *shelf.dependency holds nil value") {
 				t.Errorf("should return correct panic")
 			}
 		}
 	}()
 
-	Take("dep")
+	Take[*dependency]()
+}
+
+func TestTakeKey(t *testing.T) {
+	defer func() {
+		if r := recover(); r != nil {
+			if !strings.Contains(fmt.Sprint(r), "only one key allowed") {
+				t.Errorf("should return correct panic")
+			}
+		}
+	}()
+
+	Put[*dependency](nil, "1", "2")
 }
